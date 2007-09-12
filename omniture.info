@@ -1,0 +1,4 @@
+; $Id$
+name = Omniture
+description = Adds Omniture javascript tracking code to all your site's pages.
+

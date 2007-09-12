@@ -1,0 +1,294 @@
+<?php
+// $Id$
+/*
+ * Drupal Module: Omniture Stats
+ * Adds the required Javascript to the bottom of all your Drupal pages
+ * to allow tracking by the Omniture statistics package.
+ * Based on the Google Analytics package by Mike Carter
+ *
+ * @author: Greg Knaddison
+ */
+
+
+
+function omniture_help($section) {
+  switch ($section) {
+    case 'admin/settings/omniture':
+      return t('Omniture is a powerful statistics and site optimization package.');
+  }
+}
+
+function omniture_perm() {
+  return array('administer Omniture configuration');
+
+}
+
+function omniture_menu($maycache) {
+  $items = array();
+  if ($maycache) {
+    $items[] = array(
+      'path' => 'admin/settings/omniture',
+      'title' => t('Omniture'),
+      'description' => t('Configure the settings used to generate your Omniture.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'omniture_admin_settings',
+      'access' => user_access('administer Omniture configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+  }
+  return $items;
+}
+
+
+/**
+ * Implementation of hook_footer()  to insert Javascript at the end of the page
+ */
+function omniture_footer($main = 0) {
+
+  global $user;
+
+  // Check if we should track the currently active user's role
+  $track = 0;
+  foreach ($user->roles as $role) {
+    $role = str_replace(' ', '_', $role);
+    $track += variable_get("omniture_track_{$role}", FALSE);
+  }
+
+  // Don't track page views in the admin sections, or for certain roles
+  if (arg(0) != 'admin' && $track > 0 && !$match) {
+    
+
+    // Add any custom code snippets if specified
+    $codesnippet = variable_get('omniture_codesnippet', '');
+
+    $path = drupal_get_path('module', 'omniture');
+    if (is_file($path .'/omniture.inc')) {
+      require_once($path .'/omniture.inc');
+
+      if (function_exists('omniture_variables')) {
+        // Call the specific logic and loop through it to output it
+        $omniture_vars = omniture_variables(':');
+      }
+    }
+
+    // Taxonomy specific stuff - only for nodes
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+      $tax = $node->taxonomy;
+
+      $vocabularies = taxonomy_get_vocabularies();
+      foreach ($vocabularies as $vid => $vocab) {
+        if ($vocab->multiple == 0) {
+          if ($variable_name = variable_get("omniture_vocabvidvar_{$vocab->vid}", FALSE)) {
+            foreach ($node->taxonomy as $tid => $taxonomy) {
+              if ($taxonomy->vid == $vid) {
+                $omniture_vars[$variable_name] = $taxonomy->name; // TODO - handle multiple values
+              }
+            }
+          }
+        }
+      }
+    }
+
+    $vars = "";
+    foreach ($omniture_vars as $variable => $value) {
+      $extra_variables .= "\nvar ". $variable .'="'. $value .'";';
+    }
+    
+    $script = '<script language="javascript" type="text/javascript" src="/js/s_code_remote_h.js"></script>'."\n";
+    $script .= '<script language="javascript" type="text/javascript" ><!--'. $codesnippet . $extra_variables;
+    $script .= "\nvar s_code=s.t();if(s_code)document.write(s_code)\n //-->";
+    $script .= "\n<noscript>\n".'<img src="http://omniturecom.112.2O7.example.com/b/ss/omniturecom/1/H.7--NS/0" height="1" width="1" border="0" alt="" /></noscript>'; //TODO remove the example.com to the real place when this goes live
+    $script .= "\n</script>";
+    return $script;
+  }
+}
+
+
+/**
+ * Implementation of hook_admin_settings() for configuring the module
+ */
+function omniture_admin_settings() {
+
+  // Render the role overview.
+  $result = db_query('SELECT * FROM {role} ORDER BY name');
+
+  $form['roles'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('User Role Tracking'),
+        '#collapsible' => TRUE,
+        '#description' => t('Define what user roles should be tracked by Omniture.')
+  );
+
+  while ($role = db_fetch_object($result)) {
+     // can't use empty spaces in varname
+    $role_varname = $string = str_replace(' ', '_', $role->name);
+    $form['roles']["omniture_track_{$role_varname}"] = array(
+      '#type' => 'checkbox',
+      '#title' => t($role->name),
+      '#default_value' => variable_get("omniture_track_{$role_varname}", FALSE),
+    );
+  }
+
+  $form['vocabs'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Vocabulary Variables'),
+        '#collapsible' => TRUE,
+        '#description' => t('Define which vocabularies should should be tracked by which Omniture variables.  Only applies to the full node view (e.g. node/1 or the aliased version of a node). Leave blank to disable.')
+  );
+
+  // Allow setting a vocabulary into a variable
+  $vocabularies = taxonomy_get_vocabularies();
+  foreach ($vocabularies as $vid => $vocab) {
+    if ($vocab->multiple == 0) {
+      $form['vocabs']["omniture_vocabvidvar_{$vocab->vid}"] = array(
+        '#type' => 'textfield',
+        '#title' => t('Variable for %vocab', array('%vocab' => $vocab->name)),
+        '#default_value' => variable_get("omniture_vocabvidvar_{$vocab->vid}", FALSE),
+      );
+      
+    }
+  }
+
+  $form['advanced'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Advanced'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => t('You can add custom Omniture code here.')
+  );
+  $form['advanced']['omniture_codesnippet'] = array(
+      '#type' => 'textarea',
+      '#title' => t('JavaScript Code'),
+      '#default_value' => variable_get('omniture_codesnippet', ''),
+      '#rows' => 15,
+      '#description' => t('Paste <a href="@snippets">custom code snippets here</a>. These will be added to every page that Omniture appears on. For help with this feature see the <a href="@blog">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;).', array('@snippets' => 'http://drupal.org/node/39282', '@blog' => 'http://cutroni.com/blog/') )   
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function omniture_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+    // Raise warning if Omniture user account has not been set yet.
+    if (variable_get('omniture_account', 'UA-') == 'UA-') {
+      $requirements['omniture'] = array(
+        'title' => t('Omniture module'),
+        'description' => t('Omniture module has not been configured yet. Please configure its settings from the <a href="@url">Omniture settings page</a>.', array('@url' => url('admin/settings/omniture'))),
+        'severity' => REQUIREMENT_ERROR,
+        'value' => t('Not configured'),
+      );
+    }
+  }
+
+  return $requirements;
+}
+
+
+
+/*
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Example code from the omniture.com site itself
+Some of the paths may not be right for your site but at least it provides an example
++++++++++++++++++++++
+
+
+/*
+
+<!-- SITECATALYST CODE -->
+<script language="javascript" src="/js/s_code_remote_h.js" type="text/javascript"></script>
+<script language="javascript" type="text/javascript">
+<!-- 
+// Copyright 1997-2004 Omniture, Inc.
+
+// PAGE SPECIFIC VIA ISOL G & H 
+
+var s_pageName='Omniture: Homepage';
+var s_channel='Home';
+var s_prop7='English';
+s.pageName='Omniture: Homepage';
+s.channel='Home';
+s.prop6='English';
+
+// END PAGE SPECIFIC VIA ISOL 
+
+// SiteCatalyst code version: G.7.
+var s_server="www.omniture.com"
+  var s_campaign=""
+  var s_events=""
+  var s_products=""
+  var s_prop1="Non-Customer"
+  var s_prop15=""
+  var s_prop16=""
+  var s_eVar3 = ""
+  var s_eVar4 = ""
+  var s_eVar5 = ""
+  var s_eVar6 = ""
+  var s_eVar7 = ""
+  var s_eVar8 = ""
+  var s_eVar9 = ""
+  var s_eVar10 = ""
+  var s_eVar11 = ""
+  var s_eVar13 = ""
+  var s_eVar14 = ""
+  var s_eVar15 = ""
+  // END G.7 CODE IMPLEMENTATION 
+  
+  // H.1 CODE BEGIN 
+  s.server="www.omniture.com"
+  s.campaign=""
+  s.events=""
+  s.products=""
+  s.prop1="Non-Customer" 
+  s.prop3="Natural Search (All Other Engines)|"+s.pageName
+  s.prop5="Untracked" 
+  s.prop14=""
+  s.prop15=""
+  s.prop16=""
+  s.prop17=""
+  s.prop18=""
+  s.prop19=""
+  s.prop20="Non-Customer"
+  s.prop21=""
+  s.prop22=""
+  s.prop23=""
+  s.prop24=""
+  s.prop25=""
+  s.prop26=""
+  s.prop27=""
+  s.prop28=""
+  s.prop30=""
+  s.prop32="67.41.129.163"
+  s.prop33=""
+  s.prop34=""
+  s.prop35=""
+  s.eVar7=""
+  s.eVar8=""
+  s.eVar9=""
+  s.eVar10=""
+  s.eVar11=""
+  s.eVar13=""
+  s.eVar28=""
+  s.eVar33=""
+  // H.1 CODE END 
+  
+  var s_code=s.t();if(s_code)document.write(s_code)
+		     //-->
+		     </script>
+		     <script language="javascript" src="/js/s_code_remote_g.js" type="text/javascript"></script>
+		     <noscript>
+		     <img src="http://omniturecom.112.2O7.net/b/ss/omniturecom/1/H.7--NS/0" height="1" width="1" border="0" alt="" />
+		     </noscript>
+
+		     
+		     <!-- BANNER TRACKING IF ANY -->
+		     <script language="javascript" src="/js/functions.js"></script>
+		     <script language="javascript" src="/js/banner_track.js"></script>
+		     <!-- END SITECATALYST CODE -->
+
+*/
