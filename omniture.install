@@ -1,6 +1,10 @@
 <?php
-//$Id$
-
+// $Id$
+/*
+ * @file
+ * Installs the module, Omniture.
+ * 
+ */
 function omniture_install() {
   $result = db_query('SELECT * FROM {role} ORDER BY name');
 

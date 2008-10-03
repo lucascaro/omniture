@@ -1,5 +1,6 @@
 Module: Omniture Integration
 Author: Greg Knaddison http://knaddison.com
+Co-Maintainer: Matthew Tucker http://pingv.com
 Based on Google Analytics module by Mike Carter <www.ixis.co.uk/contact>
 
 
