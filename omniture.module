@@ -2,7 +2,7 @@
 // $Id$
 /*
  * @file
- * Drupal Module: Omniture Stats
+ * Drupal Module: Omniture SiteCatalyst Stats
  * Adds the required Javascript to the bottom of all your Drupal pages
  * to allow tracking by the Omniture statistics package.
  * Based on the Google Analytics package by Mike Carter
@@ -15,12 +15,12 @@
 function omniture_help($path, $arg) {
   switch ($path) {
     case 'admin/help#omniture':
-      return t('Omniture is a powerful statistics and site optimization package.');
+      return t("Settings for Omniture's SiteCatalyst package");
   }
 }
 
 function omniture_perm() {
-  return array('administer Omniture configuration');
+  return array('administer SiteCatalyst configuration');
 }
 
 
@@ -31,11 +31,11 @@ function omniture_menu() {
   $items = array();
 
   $items['admin/settings/omniture'] = array(
-    'title' => 'Omniture Confiruration',
-    'description' => 'Configure omniture',
+    'title' => 'SiteCatalyst',
+    'description' => 'Configure the settings used to integrate Omniture\'s SiteCatalyst.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('omniture_admin_settings'),
-    'access arguments' => array('administer Omniture configuration'),
+    'access arguments' => array('administer SiteCatalyst configuration'),
     'type' => MENU_NORMAL_ITEM,
   );
 
@@ -172,18 +172,18 @@ function omniture_admin_settings() {
         '#type' => 'fieldset',
         '#title' => t('General Settings'),
         '#collapsible' => TRUE,
-        '#description' => t('General settings for Omniture module')
+        '#description' => t('General settings')
   );
 
   $form['general']['omniture_js_file_location'] = array(
       '#type' => 'textfield',
-      '#title' => t("Complete path to Omniture Javascript file"),
+      '#title' => t("Complete path to SiteCatalyst Javascript file"),
       '#default_value' => check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js')),
   );
 
   $form['general']['omniture_image_file_location'] = array(
       '#type' => 'textfield',
-      '#title' => t("Complete path to Omniture Image file"),
+      '#title' => t("Complete path to SiteCatalyst Image file"),
       '#default_value' => check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')),
   );
 
@@ -194,7 +194,7 @@ function omniture_admin_settings() {
         '#type' => 'fieldset',
         '#title' => t('User Role Tracking'),
         '#collapsible' => TRUE,
-        '#description' => t('Define what user roles should be tracked by Omniture.')
+        '#description' => t('Define what user roles should be tracked by SiteCatalyst.')
   );
 
   while ($role = db_fetch_object($result)) {
@@ -211,7 +211,7 @@ function omniture_admin_settings() {
         '#type' => 'fieldset',
         '#title' => t('Vocabulary Variables'),
         '#collapsible' => TRUE,
-        '#description' => t('Define which vocabularies should should be tracked by which Omniture variables.  Only applies to the full node view (e.g. node/1 or the aliased version of a node). Leave blank to disable for a vocabulary.  Multiple terms from a "Multiple select" vocabulary will be placed into a comma separated list.  Not available for "Free tagging" vocabularies.')
+        '#description' => t('Define which vocabularies should should be tracked by which SiteCatalyst variables.  Only applies to the full node view (e.g. node/1 or the aliased version of a node). Leave blank to disable for a vocabulary.  Multiple terms from a "Multiple select" vocabulary will be placed into a comma separated list.  Not available for "Free tagging" vocabularies.')
   );
 
   // Allow setting a vocabulary into a variable
@@ -231,14 +231,14 @@ function omniture_admin_settings() {
         '#title' => t('Advanced'),
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
-        '#description' => t('You can add custom Omniture code here.')
+        '#description' => t('You can add custom SiteCatalyst code here.')
   );
   $form['advanced']['omniture_codesnippet'] = array(
       '#type' => 'textarea',
       '#title' => t('JavaScript Code'),
       '#default_value' => variable_get('omniture_codesnippet', ''),
       '#rows' => 15,
-      '#description' => t('Paste <a href="@snippets">custom code snippets here</a>. These will be added to every page that Omniture appears on. For help with this feature see the <a href="@blog">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;).', array('@snippets' => 'http://drupal.org/node/39282', '@blog' => 'http://cutroni.com/blog/') )   
+      '#description' => t('Paste <a href="@snippets">custom code snippets here</a>. These will be added to every page that SiteCatalyst appears on. For help with this feature see the <a href="@blog">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;).', array('@snippets' => 'http://drupal.org/node/39282', '@blog' => 'http://cutroni.com/blog/') )   
   );
 
   return system_settings_form($form);

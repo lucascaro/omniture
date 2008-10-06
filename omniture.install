@@ -15,7 +15,7 @@ function omniture_install() {
     //check if variable is not already set from a previous install
     if (strpos(variable_get($omniture_role, 'new'), 'new') !== FALSE) {
       variable_set($omniture_role, TRUE);
-      drupal_set_message(t('Role %rolename is now being tracked by Omniture', array('%rolename' => $role->name)));
+      drupal_set_message(t('Role %rolename is now being tracked by SiteCatalyst', array('%rolename' => $role->name)));
     }
   }
 }
