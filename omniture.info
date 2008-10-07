@@ -1,4 +1,5 @@
 ; $Id$
 name = Omniture
-description = Adds Omniture javascript tracking code to all your site's pages.
+description = Adds Omniture SiteCatalyst javascript tracking code to all your site's pages.
 core = 6.x
+package = Statistics

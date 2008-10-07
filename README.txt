@@ -11,7 +11,7 @@ Adds the Omniture statistics system to your website.
 Requirements
 ============
 
-* Omnitureuser account
+* Omniture user account
 
 
 Installation
@@ -22,17 +22,8 @@ modules directory as usual.
 Customization
 ============
 * You can customize the module to your site to create variables
-more suited to tracking your needs by 
-1) creating a php file called omniture.inc in the same directory
-as the omniture.module file
-2) Creating a function in that file called omniture_variables which should 
-return an array of variables with the following structure/use:
-
-       $omniture_variables['s.pageName'] => "This is my page name";
-
-Will be converted to the JavaScript 
-
-     var s.pageName="This is my page name";
+more suited to tracking your needs by utilizing hook_omniture_variables.
+For an implementation example, see http://drupal.org/node/182201#comment-1046683 
 
 
 Usage

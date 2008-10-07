@@ -4,7 +4,7 @@
  * @file
  * Drupal Module: Omniture SiteCatalyst Stats
  * Adds the required Javascript to the bottom of all your Drupal pages
- * to allow tracking by the Omniture statistics package.
+ * to allow tracking by the Omniture SiteCatalyst statistics package.
  * Based on the Google Analytics package by Mike Carter
  *
  * @author: Greg Knaddison
@@ -23,7 +23,6 @@ function omniture_perm() {
   return array('administer SiteCatalyst configuration');
 }
 
-
 /**
  * Implementation of hook_menu
  */
@@ -38,7 +37,6 @@ function omniture_menu() {
     'access arguments' => array('administer SiteCatalyst configuration'),
     'type' => MENU_NORMAL_ITEM,
   );
-
 
   return $items;
 }
@@ -58,20 +56,8 @@ function omniture_footer($main = 0) {
   }
 
   // Don't track page views in the admin sections, or for certain roles
-  if (arg(0) != 'admin' && $track > 0 && !$match) {
+  if (arg(0) != 'admin' && $track > 0) {
     
-
-    // If they have created an inc file, include it and run it
-    $path = drupal_get_path('module', 'omniture');
-    if (is_file($path .'/omniture.inc')) {
-      require_once($path .'/omniture.inc');
-
-      if (function_exists('omniture_variables')) {
-        // Call the specific logic and loop through it to output it
-        $omniture_inc_vars = omniture_variables(':');
-      }
-    }
-
     // Add any custom code snippets if specified
     $codesnippet = variable_get('omniture_codesnippet', '');
 
@@ -92,7 +78,6 @@ function omniture_footer($main = 0) {
                 else {
                   $terms_for_omniture .= $taxonomy->name;
                 }
-
               }
             }
             if (isset($terms_for_omniture)) {
@@ -101,20 +86,12 @@ function omniture_footer($main = 0) {
           }
         }
       }
-      
-
     }
 
     // Format and combine variables in the "right" order
     // Right order is the code file (least likely to be maintained)
     // Then admin settings with codesnippet first and finally taxonomy->vars
-    $extra_variables_formatted = "";
-    if (isset($omniture_inc_vars)) {
-      foreach ($omniture_inc_vars as $variable => $value) {
-        $extra_variables_formatted .= "\n". $variable .'="'. $value .'";';
-      }
-    }
-    $extra_variables_formatted .= $codesnippet;
+    $extra_variables_formatted = $codesnippet;
 
     if (isset($omniture_vocab_vars)) {
       foreach ($omniture_vocab_vars as $variable => $value) {
@@ -122,47 +99,42 @@ function omniture_footer($main = 0) {
       }
     }
 
-    $script = "<!-- SiteCatalyst code version: H.13.\nCopyright 1997-2007 Omniture, Inc. More info available at\nhttp://www.omniture.com -->";
-    $script .= '<script type="text/javascript" language="JavaScript" src="';
-    $script .=  check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
-    $script .= '"></script>';
-    $script .= '<script type="text/javascript" language="JavaScript"><!--'."\n";
-    $script .= '/* You may give each page an identifying name, server, and channel on'."\n";
-    $script .= 'the next lines. */'."\n";
-    $script .= 's.pageName=""'."\n";
-    $script .= 's.server=""'."\n";
-    $script .= 's.channel=""'."\n";
-    $script .= 's.pageType=""'."\n";
-    $script .= 's.prop1=""'."\n";
-    $script .= 's.prop2=""'."\n";
-    $script .= 's.prop3=""'."\n";
-    $script .= 's.prop4=""'."\n";
-    $script .= 's.prop5=""'."\n";
-    $script .= '/* Conversion Variables */'."\n";
-    $script .= 's.campaign=""'."\n";
-    $script .= 's.state=""'."\n";
-    $script .= 's.zip=""'."\n";
-    $script .= 's.events=""'."\n";
-    $script .= 's.products=""'."\n";
-    $script .= 's.purchaseID=""'."\n";
-    $script .= 's.eVar1=""'."\n";
-    $script .= 's.eVar2=""'."\n";
-    $script .= 's.eVar3=""'."\n";
-    $script .= 's.eVar4=""'."\n";
-    $script .= 's.eVar5=""'."\n";
+    $header = "<!-- SiteCatalyst code version: H.13. Copyright 1997-2007 Omniture, Inc. More info available at http://www.omniture.com -->\n";
+    $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
+    $header .=  check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
+    $header .= "\"></script>\n";
+    $header .= "<script type=\"text/javascript\" language=\"JavaScript\"><!--\n";
+
+    $footer = '/************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/'."\n";
+    $footer .= 'var s_code=s.t();if(s_code)document.write(s_code)//--></script>'."\n";
+    $footer .= '<script language="JavaScript" type="text/javascript"><!--'."\n";
+    $footer .= "if(navigator.appVersion.indexOf('MSIE')>=0)document.write(unescape('%3C')+'\!-'+'-')"."\n";
+    $footer .= '//--></script><noscript><a href="http://www.omniture.com" title="Web Analytics"><img src="';
+    $footer .= check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')) .'"'."\n";
+    $footer .= 'height="1" width="1" border="0" alt="" /></a></noscript><!--/DO NOT REMOVE/-->'."\n";
+    $footer .= '<!-- End SiteCatalyst code version: H.13. -->'."\n";
+
+    if ($omniture_hooked_vars = module_invoke_all('omniture_variables', $main)) {
+      if (isset($omniture_hooked_vars['header'])) {
+        $header = $omniture_hooked_vars['header'];
+      }
+      if (isset($omniture_hooked_vars['variables'])) {
+        foreach ($omniture_hooked_vars['variables'] as $k => $v) {
+          $extra_variables_formatted .= "$k=\"$v\";\n";
+        }
+      }
+      if (isset($omniture_hooked_vars['footer'])) {
+        $footer = $omniture_hooked_vars['footer'];
+      }
+    }
+
+    $script  = $header;
     $script .= $extra_variables_formatted;
-    $script .= '/************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/'."\n";
-    $script .= 'var s_code=s.t();if(s_code)document.write(s_code)//--></script>'."\n";
-    $script .= '<script language="JavaScript" type="text/javascript"><!--'."\n";
-    $script .= "if(navigator.appVersion.indexOf('MSIE')>=0)document.write(unescape('%3C')+'\!-'+'-')"."\n";
-    $script .= '//--></script><noscript><a href="http://www.omniture.com" title="Web Analytics"><img src="';
-    $script .= check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')) .'"'."\n";
-    $script .= 'height="1" width="1" border="0" alt="" /></a></noscript><!--/DO NOT REMOVE/-->'."\n";
-    $script .= '<!-- End SiteCatalyst code version: H.13. -->'."\n";
+    $script .= $footer;
+
     return $script;
   }
 }
-
 
 /**
  * Implementation of hook_admin_settings() for configuring the module
@@ -233,6 +205,7 @@ function omniture_admin_settings() {
         '#collapsed' => TRUE,
         '#description' => t('You can add custom SiteCatalyst code here.')
   );
+  
   $form['advanced']['omniture_codesnippet'] = array(
       '#type' => 'textarea',
       '#title' => t('JavaScript Code'),
@@ -245,12 +218,10 @@ function omniture_admin_settings() {
 }
 
 
-/*
-+++++++++++++++++++++++++++++++++++++++++++++++++++++
-Example code from the omniture.com site itself
-Some of the paths may not be right for your site but at least it provides an example
-+++++++++++++++++++++
-
+/**
+ * Example output from the omniture.com site itself.
+ * Some of the paths may not be applicable for your site but at least it provides an example.
+ */
 
 /*
 
