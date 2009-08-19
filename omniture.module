@@ -99,7 +99,9 @@ function omniture_footer($main = 0) {
       }
     }
 
-    $header = "<!-- SiteCatalyst code version: H.13. Copyright 1997-2007 Omniture, Inc. More info available at http://www.omniture.com -->\n";
+    $header = "<!-- SiteCatalyst code version: ";
+    $header .=  check_plain(variable_get("omniture_version", 'H.13.'));
+    $header .= " Copyright 1997-2009 Omniture, Inc. More info available at http://www.omniture.com -->\n";
     $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
     $header .=  check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
     $header .= "\"></script>\n";
@@ -112,7 +114,10 @@ function omniture_footer($main = 0) {
     $footer .= '//--></script><noscript><a href="http://www.omniture.com" title="Web Analytics"><img src="';
     $footer .= check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')) .'"'."\n";
     $footer .= 'height="1" width="1" border="0" alt="" /></a></noscript><!--/DO NOT REMOVE/-->'."\n";
-    $footer .= '<!-- End SiteCatalyst code version: H.13. -->'."\n";
+    $footer .= '<!-- End SiteCatalyst code version: ';
+    $footer .=  check_plain(variable_get("omniture_version", 'H.13.'));
+    $footer .= ' -->'."\n";
+ 
 
     if ($omniture_hooked_vars = module_invoke_all('omniture_variables', $main)) {
       if (isset($omniture_hooked_vars['header'])) {
@@ -157,6 +162,12 @@ function omniture_admin_settings() {
       '#type' => 'textfield',
       '#title' => t("Complete path to SiteCatalyst Image file"),
       '#default_value' => check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')),
+  );
+
+  $form['general']['omniture_version'] = array(
+      '#type' => 'textfield',
+      '#title' => t("SiteCatalyst version (used by omniture for debugging)"),
+      '#default_value' => check_plain(variable_get("omniture_version", 'H.13')),
   );
 
   // Render the role overview.
