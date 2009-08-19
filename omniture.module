@@ -62,7 +62,7 @@ function omniture_footer($main = 0) {
     $codesnippet = variable_get('omniture_codesnippet', '');
 
     // Taxonomy specific stuff - only for nodes
-    if (module_exists('taxonomy') && $node = menu_get_object()) {
+    if ($node = menu_get_object()) {
       $tax = $node->taxonomy;
 
       $vocabularies = taxonomy_get_vocabularies();
@@ -99,9 +99,7 @@ function omniture_footer($main = 0) {
       }
     }
 
-    $header = "<!-- SiteCatalyst code version: ";
-    $header .=  check_plain(variable_get("omniture_version", 'H.13.'));
-    $header .= " Copyright 1997-2009 Omniture, Inc. More info available at http://www.omniture.com -->\n";
+    $header = "<!-- SiteCatalyst code version: H.13. Copyright 1997-2007 Omniture, Inc. More info available at http://www.omniture.com -->\n";
     $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
     $header .=  check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
     $header .= "\"></script>\n";
@@ -114,10 +112,7 @@ function omniture_footer($main = 0) {
     $footer .= '//--></script><noscript><a href="http://www.omniture.com" title="Web Analytics"><img src="';
     $footer .= check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')) .'"'."\n";
     $footer .= 'height="1" width="1" border="0" alt="" /></a></noscript><!--/DO NOT REMOVE/-->'."\n";
-    $footer .= '<!-- End SiteCatalyst code version: ';
-    $footer .=  check_plain(variable_get("omniture_version", 'H.13.'));
-    $footer .= ' -->'."\n";
- 
+    $footer .= '<!-- End SiteCatalyst code version: H.13. -->'."\n";
 
     if ($omniture_hooked_vars = module_invoke_all('omniture_variables', $main)) {
       if (isset($omniture_hooked_vars['header'])) {
@@ -164,12 +159,6 @@ function omniture_admin_settings() {
       '#default_value' => check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')),
   );
 
-  $form['general']['omniture_version'] = array(
-      '#type' => 'textfield',
-      '#title' => t("SiteCatalyst version (used by omniture for debugging)"),
-      '#default_value' => check_plain(variable_get("omniture_version", 'H.13')),
-  );
-
   // Render the role overview.
   $result = db_query('SELECT * FROM {role} ORDER BY name');
 
@@ -198,16 +187,14 @@ function omniture_admin_settings() {
   );
 
   // Allow setting a vocabulary into a variable
-  if (module_exists('taxonomy')) {
-    $vocabularies = taxonomy_get_vocabularies();
-    foreach ($vocabularies as $vid => $vocab) {
-      if ($vocab->tags == 0) {
-        $form['vocabs']["omniture_vocabvidvar_{$vocab->vid}"] = array(
-          '#type' => 'textfield',
-          '#title' => t('Variable for %vocab', array('%vocab' => $vocab->name)),
-          '#default_value' => variable_get("omniture_vocabvidvar_{$vocab->vid}", FALSE),
-        );
-      }
+  $vocabularies = taxonomy_get_vocabularies();
+  foreach ($vocabularies as $vid => $vocab) {
+    if ($vocab->tags == 0) {
+      $form['vocabs']["omniture_vocabvidvar_{$vocab->vid}"] = array(
+        '#type' => 'textfield',
+        '#title' => t('Variable for %vocab', array('%vocab' => $vocab->name)),
+        '#default_value' => variable_get("omniture_vocabvidvar_{$vocab->vid}", FALSE),
+      );
     }
   }
 
