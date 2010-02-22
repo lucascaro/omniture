@@ -50,13 +50,12 @@ function omniture_menu() {
 }
 
 /**
- * Implementation of hook_page_alter(). 
+ * Implements hook_page_alter().
  */
 function omniture_page_alter($page) {
-
   global $user;
 
-  // Check if we should track the currently active user's role
+  // Check if we should track the currently active user's role.
   $track = 0;
   if (is_array($user->roles)) {
     foreach ($user->roles as $role) {
@@ -65,16 +64,16 @@ function omniture_page_alter($page) {
     }
   }
 
-  // Don't track page views in the admin sections, or for certain roles
-  if (arg(0) == 'admin' && $track <= 0) {
+  // Don't track page views in the admin sections, or for certain roles.
+  if (arg(0) == 'admin' || $track <= 0) {
     return;
   }
 
-  // Add any custom code snippets if specified
+  // Add any custom code snippets if specified.
   $codesnippet = variable_get('omniture_codesnippet', '');
 
   // Format and combine variables in the "right" order
-  // Right order is te code file (list likely to be maintained)
+  // Right order is the code file (list likely to be maintained)
   // Then admin settings with codesnippet first and finally taxonomy->vars
   $extra_variables_formatted = $codesnippet;
 
@@ -151,12 +150,12 @@ function _omniture_format_variables(array $variables = array()) {
 }
 
 /**
- * Implementation of hook_admin_settings() for configuring the module
+ * Menu callback; Omniture settings.
  */
 function omniture_admin_settings() {
   $form['general'] = array(
     '#type' => 'fieldset',
-    '#title' => t('General Settings'),
+    '#title' => t('General settings'),
     '#collapsible' => TRUE,
     '#weight' => '-10',
   );
@@ -170,18 +169,18 @@ function omniture_admin_settings() {
   $form['general']['omniture_image_file_location'] = array(
     '#type' => 'textfield',
     '#title' => t("Complete path to SiteCatalyst Image file"),
-    '#default_value' => check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.13--NS/0')),
+    '#default_value' => check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.20.3--NS/0')),
   );
 
   $form['general']['omniture_version'] = array(
     '#type' => 'textfield',
     '#title' => t("SiteCatalyst version (used by omniture for debugging)"),
-    '#default_value' => check_plain(variable_get("omniture_version", 'H.20.3')),
+    '#default_value' => check_plain(variable_get("omniture_version", 'H.20.3.')),
   );
 
   $form['roles'] = array(
         '#type' => 'fieldset',
-        '#title' => t('User Role Tracking'),
+        '#title' => t('User role tracking'),
         '#collapsible' => TRUE,
         '#description' => t('Define what user roles should be tracked by SiteCatalyst.'),
         '#weight' => '-6',
@@ -190,16 +189,16 @@ function omniture_admin_settings() {
   $result = db_select('role','r')
     ->fields('r')
     ->orderBy('name', 'ASC')
-    ->execure();
+    ->execute();
 
   foreach ($result as $role) {
-    // can't use empty spaces in varname
-    $role_varname = $string = str_replace(' ', '_', $role->name);
-    // Only the basic roless are translated.
-    $role_name = in_array($role-rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID)) ? t($role->name) : $role->name;
+    // Can't use empty spaces in varname.
+    $role_varname = str_replace(' ', '_', $role->name);
+    // Only the basic roles are translated.
+    $role_name = in_array($role->rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID)) ? t($role->name) : $role->name;
     $form['roles']["omniture_track_{$role_varname}"] = array(
       '#type' => 'checkbox',
-      '#title' => $role->name,
+      '#title' => $role_name,
       '#default_value' => variable_get("omniture_track_{$role_varname}", FALSE),
     );
   }
