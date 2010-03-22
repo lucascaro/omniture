@@ -38,7 +38,7 @@ function omniture_permission() {
  */
 function omniture_menu() {
   $items['admin/config/system/omniture'] = array(
-    'title' => 'SiteCatalyst',
+    'title' => 'Omniture SiteCatalyst',
     'description' => "Configure the settings used to integrate Omniture's SiteCatalyst.",
     'page callback' => 'drupal_get_form',
     'page arguments' => array('omniture_admin_settings'),
