@@ -1,12 +1,14 @@
+$ID: $
 Module: Omniture Integration
 Author: Greg Knaddison http://knaddison.com
-Co-Maintainer: Matthew Tucker http://pingv.com
-Based on Google Analytics module by Mike Carter <www.ixis.co.uk/contact>
+Co-Maintainer: Matthew Tucker
+Based on Google Analytics module by Mike Carter www.ixis.co.uk
 
 
 Description
 ===========
 Adds the Omniture statistics system to your website.
+
 
 Requirements
 ============
@@ -19,11 +21,13 @@ Installation
 * Copy the 'omniture' module directory in to your Drupal
 modules directory as usual.
 
+
 Customization
-============
+=============
 * You can customize the module to your site to create variables
 more suited to tracking your needs by utilizing hook_omniture_variables.
-For an implementation example, see http://drupal.org/node/182201#comment-1046683 
+For an implementation example, see the omniture_basic module included
+in this package.
 
 
 Usage
@@ -38,6 +42,3 @@ HTML footer can confirm this by viewing the page source from
 your browser.
 
 'admin/' pages are automatically ignored by this module.
-
-
-$Id$

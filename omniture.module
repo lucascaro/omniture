@@ -178,11 +178,11 @@ function omniture_admin_settings() {
   );
 
   $form['roles'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('User role tracking'),
-        '#collapsible' => TRUE,
-        '#description' => t('Define what user roles should be tracked by SiteCatalyst.'),
-        '#weight' => '-6',
+    '#type' => 'fieldset',
+    '#title' => t('User role tracking'),
+    '#collapsible' => TRUE,
+    '#description' => t('Define which user roles should be tracked by SiteCatalyst.'),
+    '#weight' => '-6',
   );
 
   $result = db_select('role','r')
