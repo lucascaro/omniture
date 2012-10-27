@@ -68,6 +68,10 @@ function omniture_page_alter(&$page) {
     return;
   }
 
+  // Like drupal_add_js, add a query string to the end of the js file location.
+  $query_string = '?' . variable_get('css_js_query_string', '0');
+  $js_file_location = check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
+
   // Add any custom code snippets if specified.
   $codesnippet = variable_get('omniture_codesnippet', '');
 
@@ -80,7 +84,7 @@ function omniture_page_alter(&$page) {
   $header .=  check_plain(variable_get("omniture_version", 'H.20.3.'));
   $header .= "\nCopyright 1997-2009 Omniture, Inc. More info available at http://www.omniture.com -->\n";
   $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
-  $header .=  check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
+  $header .= $js_file_location . $query_string;
   $header .= "\"></script>\n";
   $header .= "<script type=\"text/javascript\" language=\"JavaScript\"><!--\n";
 
