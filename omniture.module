@@ -72,8 +72,12 @@ function omniture_page_alter(&$page) {
   $query_string = '?' . variable_get('css_js_query_string', '0');
   $js_file_location = check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
 
-  // Add any custom code snippets if specified.
-  $codesnippet = variable_get('omniture_codesnippet', '');
+  // Add any custom code snippets if specified and replace any tokens.
+  $context = _omniture_get_token_context();
+  $codesnippet = token_replace(variable_get('omniture_codesnippet', ''), $context, array(
+    'clear' => TRUE,
+    'sanitize' => TRUE,
+  )) . "\n";
 
   // Format and combine variables in the "right" order
   // Right order is the code file (list likely to be maintained)
@@ -213,13 +217,22 @@ function omniture_admin_settings() {
     '#description' => t('You can add custom SiteCatalyst code here.'),
     '#weight' => '-2',
   );
-
+  $examples = array(
+    'if ([current-date:custom:N] >= 6) { s.prop5 = "weekend"; }',
+    'if ("[current-page:url:path]" == "node") {s.prop9 = "homepage";} else {s.prop9 = "[current-page:title]";}',
+  );
   $form['advanced']['omniture_codesnippet'] = array(
     '#type' => 'textarea',
     '#title' => t('JavaScript Code'),
     '#default_value' => variable_get('omniture_codesnippet', ''),
     '#rows' => 15,
-    '#description' => t('Paste <a href="@snippets">custom code snippets here</a>. These will be added to every page that SiteCatalyst appears on. For help with this feature see the <a href="@blog">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;).', array('@snippets' => 'http://drupal.org/node/39282', '@blog' => 'http://cutroni.com/blog/')),
+    '#description' => t('Examples:') . theme('item_list', array('items' => $examples)),
+  );
+  $form['advanced']['tokens'] = array(
+    '#theme' => 'token_tree',
+    '#token_types' => array('node', 'menu', 'term', 'user'),
+    '#global_types' => TRUE,
+    '#click_insert' => TRUE,
   );
 
   return system_settings_form($form);
@@ -247,4 +260,21 @@ function omniture_set_variable($name = NULL, $value = NULL) {
 
 function omniture_get_variables() {
   return omniture_set_variable();
+}
+
+/**
+ * Create a data array to be used by token_replace().
+ *
+ * @return array
+ */
+function _omniture_get_token_context() {
+  $context = &drupal_static(__function__);
+
+  if (is_null($context)) {
+    $context['node'] = menu_get_object('node');
+    $context['term'] = menu_get_object('taxonomy_term', 2);
+    $context['menu'] = menu_load('main-menu');
+  }
+
+  return $context;
 }
