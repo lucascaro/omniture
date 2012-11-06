@@ -49,6 +49,32 @@ function omniture_menu() {
 }
 
 /**
+ * Implements hook_theme().
+ */
+function omniture_theme($existing, $type, $theme, $path) {
+  return array(
+    'omniture_variables' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_omniture_variables().
+ */
+function omniture_omniture_variables() {
+  $variables = array();
+
+  // Include variables from the "custom variables" section of the settings form.
+  $settings_variables = variable_get('omniture_variables', array());
+  foreach ($settings_variables as $variable) {
+    $variables[$variable['name']] = $variable['value'];
+  }
+
+  return array('variables' => $variables);
+}
+
+/**
  * Implements hook_page_alter().
  */
 function omniture_page_alter(&$page) {
@@ -85,7 +111,7 @@ function omniture_page_alter(&$page) {
   $extra_variables_formatted = $codesnippet;
 
   $header = "<!-- SiteCatalyst code version: ";
-  $header .=  check_plain(variable_get("omniture_version", 'H.20.3.'));
+  $header .= check_plain(variable_get("omniture_version", 'H.20.3.'));
   $header .= "\nCopyright 1997-2009 Omniture, Inc. More info available at http://www.omniture.com -->\n";
   $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
   $header .= $js_file_location . $query_string;
@@ -137,6 +163,9 @@ function omniture_page_alter(&$page) {
 function _omniture_format_variables(array $variables = array()) {
   $extra_variables = omniture_get_variables();
 
+  // Create context data to be used by token.
+  $context = !empty($variables) ? _omniture_get_token_context() : array();
+
   $variables_formatted = '';
   foreach ($variables as $key => $value) {
     if (is_array($value)) {
@@ -149,7 +178,10 @@ function _omniture_format_variables(array $variables = array()) {
     }
 
     $key = check_plain($key);
-    $value = check_plain($value);
+    $value = token_replace($value, $context, array(
+      'clear' => TRUE,
+      'sanitize' => TRUE,
+    ));
     $variables_formatted .= "{$key}=\"{$value}\";\n";
   }
   return $variables_formatted;
@@ -158,7 +190,7 @@ function _omniture_format_variables(array $variables = array()) {
 /**
  * Menu callback; Omniture settings.
  */
-function omniture_admin_settings() {
+function omniture_admin_settings($form, &$form_state) {
   $form['general'] = array(
     '#type' => 'fieldset',
     '#title' => t('General settings'),
@@ -209,6 +241,22 @@ function omniture_admin_settings() {
     );
   }
 
+  $form['variables'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Custom Variables'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#description' => t('You can define tracking variables here.'),
+    '#weight' => '-3',
+  );
+  if (module_exists('token')) {
+    $form['variables']['#description'] .= t('You can use the table below to insert tokens as varible values.');
+  }
+
+  $existing_variables = isset($form_state['input']['omniture_variables']) ? $form_state['input']['omniture_variables'] : variable_get('omniture_variables', array());
+  _omniture_variables_form($form['variables'], $existing_variables);
+
+
   $form['advanced'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advanced'),
@@ -239,6 +287,130 @@ function omniture_admin_settings() {
 }
 
 /**
+ * Helper form builder for a variables form.
+ */
+function _omniture_variables_form(&$form, $existing_variables = array()) {
+  $form['omniture_variables'] = array(
+    '#type' => 'markup',
+    '#tree' => FALSE,
+    '#prefix' => '<div id="omniture-variables-wrapper">',
+    '#suffix' => '</div>',
+    '#theme' => 'omniture_variables',
+    '#element_validate' => array('omniture_variables_form_validate'),
+  );
+  // Add existing variables to the form unless they are empty.
+  foreach ($existing_variables as $key => $data) {
+    _omniture_variable_form($form, $key, $data);
+  }
+  // Add one blank set of variable fields.
+  _omniture_variable_form($form, count($existing_variables));
+  $form['add_another_variable'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add another variable'),
+    '#submit' => array('omniture_add_another_variable_submit'),
+    '#limit_validation_errors' => array(),
+    '#ajax' => array(
+      'callback' => 'omniture_add_another_variable_js',
+      'wrapper' => 'omniture-variables-wrapper',
+      'effect' => 'fade',
+    ),
+  );
+  $form['tokens'] = array(
+    '#theme' => 'token_tree',
+    '#token_types' => array('node', 'menu', 'term', 'user'),
+    '#global_types' => TRUE,
+    '#click_insert' => TRUE,
+  );
+}
+
+/**
+ * Helper form builder for an individual variable.
+ */
+function _omniture_variable_form(&$form, $key, $data = array()) {
+  $form['omniture_variables'][$key]['name'] = array(
+    '#type' => 'textfield',
+    '#title_display' => 'invisible',
+    '#title' => t('Name'),
+    '#default_value' => isset($data['name']) ? $data['name'] : '',
+    '#parents' => array('omniture_variables', $key, 'name'),
+    '#attributes' => array('class' => array('field-variable-name')),
+  );
+  $form['omniture_variables'][$key]['value'] = array(
+    '#type' => 'textfield',
+    '#title_display' => 'invisible',
+    '#title' => t('Value'),
+    '#default_value' => isset($data['value']) ? $data['value'] : '',
+    '#parents' => array('omniture_variables', $key, 'value'),
+    '#attributes' => array('class' => array('field-variable-value')),
+  );
+  if (empty($data)) {
+    $form['omniture_variables'][$key]['name']['#description'] = t('Example: prop1');
+    $form['omniture_variables'][$key]['value']['#description'] = t('Example: [current-page:title]');
+  }
+}
+
+/**
+ * Validation function used by the variables form.
+ */
+function omniture_variables_form_validate($form, &$form_state) {
+  if ($form_state['triggering_element']['#value'] != t('Add another variable')) {
+    omniture_variables_trim_empties($form_state['values']);
+  }
+}
+
+/**
+ * Given the values entered into the omniture variables form, remove any empty
+ * variables (i.e. both "name" & "value" are blank).
+ */
+function omniture_variables_trim_empties(&$values, $parent = 'omniture_variables') {
+  foreach ($values as $key => &$val) {
+    if ($key === $parent) {
+      // We found the omniture variables.
+      foreach ($val as $k => $v) {
+  if (empty($val[$k]['name']) && empty($val[$k]['value'])) {
+    unset($val[$k]);
+  }
+      }
+      // Reset the array indexes to prevent wierd behavior caused by a variable
+      // being removed in the middle of the array.
+      $val = array_values($val);
+      break;
+    }
+    elseif (is_array($val)) {
+      omniture_variables_trim_empties($val, $parent);
+    }
+  }
+}
+
+/**
+ * AJAX callback function for adding variable fields to the settings form.
+ */
+function omniture_add_another_variable_js($form, $form_state) {
+  return $form['variables']['omniture_variables'];
+}
+
+/**
+ * Submit handler to add more variables.
+ */
+function omniture_add_another_variable_submit($form, &$form_state) {
+  $form_state['omniture_variables'] = $form_state['input']['omniture_variables'];
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Form validation.
+ */
+function omniture_admin_settings_validate($form, &$form_state) {
+  // Remove any empty variables.
+  foreach ($form_state['values']['omniture_variables'] as $key => $val) {
+    if (empty($val['name']) && empty($val['value'])) {
+      unset($form_state['values']['omniture_variables'][$key]);
+    }
+  }
+  $form_state['values']['omniture_variables'] = array_values($form_state['values']['omniture_variables']);
+}
+
+/**
  * Used to replace the value of omniture variables. The variables need to be
  * defined with hook_omniture_variables().
  *
@@ -260,6 +432,24 @@ function omniture_set_variable($name = NULL, $value = NULL) {
 
 function omniture_get_variables() {
   return omniture_set_variable();
+}
+
+/**
+ * Theme function for the "variables" form.
+ */
+function theme_omniture_variables($variables) {
+  $form = $variables['form'];
+
+  $add_button = drupal_render($form['add_another_variable']);
+  unset($form['add_another_variable']);
+
+  $headers = array(t('Name'), t('Value'));
+  $rows = array();
+  foreach (element_children($form) as $key) {
+    $rows[] = array(drupal_render($form[$key]['name']), drupal_render($form[$key]['value']));
+  }
+
+  return theme('table', array('header' => $headers, 'rows' => $rows)) . $add_button;
 }
 
 /**
