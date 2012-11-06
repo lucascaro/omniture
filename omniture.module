@@ -367,9 +367,9 @@ function omniture_variables_trim_empties(&$values, $parent = 'omniture_variables
     if ($key === $parent) {
       // We found the omniture variables.
       foreach ($val as $k => $v) {
-  if (empty($val[$k]['name']) && empty($val[$k]['value'])) {
-    unset($val[$k]);
-  }
+        if (empty($val[$k]['name']) && empty($val[$k]['value'])) {
+          unset($val[$k]);
+        }
       }
       // Reset the array indexes to prevent wierd behavior caused by a variable
       // being removed in the middle of the array.
