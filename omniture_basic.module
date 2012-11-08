@@ -31,7 +31,7 @@ function omniture_basic_omniture_variables() {
       }
       // @todo: what to do with multilingual terms?
       if (isset($node->{$field['field_name']}[LANGUAGE_NONE][0]['taxonomy_term'])) {
-	foreach ($node->{$field['field_name']}[LANGUAGE_NONE] as $term) {
+        foreach ($node->{$field['field_name']}[LANGUAGE_NONE] as $term) {
           if ($variable_name = variable_get("omniture_vocabvidvar_{$term['taxonomy_term']->vid}", FALSE)) {
             $omniture_taxonomy[$variable_name][] = $term['taxonomy_term']->name;
           }

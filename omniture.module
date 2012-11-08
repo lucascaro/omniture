@@ -60,10 +60,48 @@ function omniture_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Implements hook_context_plugins().
+ */
+function omniture_context_plugins() {
+  $plugins = array();
+  $plugins['omniture_reaction_variables'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'omniture') .'/plugins/context',
+      'file' => 'omniture_reaction_variables.inc',
+      'class' => 'omniture_reaction_variables',
+      'parent' => 'context_reaction',
+    ),
+  );
+  return $plugins;
+}
+
+/**
+ * Implements hook_context_registry().
+ */
+function omniture_context_registry() {
+  $reg = array(
+    'reactions' => array(
+      'omniture_vars' => array(
+        'title' => t('Omniture Variables'),
+        'plugin' => 'omniture_reaction_variables',
+      ),
+    ),
+  );
+  return $reg;
+}
+
+/**
  * Implementation of hook_omniture_variables().
  */
 function omniture_omniture_variables() {
   $variables = array();
+
+  // Include variables set using the context module.
+  if (module_exists('context')) {
+    if ($plugin = context_get_plugin('reaction', 'omniture_vars')) {
+      $plugin->execute($variables);
+    }
+  }
 
   // Include variables from the "custom variables" section of the settings form.
   $settings_variables = variable_get('omniture_variables', array());
