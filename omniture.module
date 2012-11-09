@@ -10,6 +10,7 @@
  * @co-maintainer: Matthew Tucker
  *
  */
+use Drupal\omniture\SiteCatalyst;
 
 /**
  * Implements hook_help().
@@ -136,6 +137,9 @@ function omniture_page_alter(&$page) {
   $query_string = '?' . variable_get('css_js_query_string', '0');
   $js_file_location = check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
 
+  $site_catalyst = new SiteCatalyst($js_file_location, check_plain(variable_get("omniture_version", 'H.20.3.')), check_plain(variable_get('omniture_account', '')));
+
+
   // Add any custom code snippets if specified and replace any tokens.
   $context = _omniture_get_token_context();
   $codesnippet = token_replace(variable_get('omniture_codesnippet', ''), $context, array(
@@ -143,40 +147,17 @@ function omniture_page_alter(&$page) {
     'sanitize' => TRUE,
   )) . "\n";
 
-  // Format and combine variables in the "right" order
-  // Right order is the code file (list likely to be maintained)
-  // Then admin settings with codesnippet first and finally taxonomy->vars
-  $extra_variables_formatted = $codesnippet;
-
-  $header = "<!-- SiteCatalyst code version: ";
-  $header .= check_plain(variable_get("omniture_version", 'H.20.3.'));
-  $header .= "\nCopyright 1997-2009 Omniture, Inc. More info available at http://www.omniture.com -->\n";
-  $header .= "<script type=\"text/javascript\" language=\"JavaScript\" src=\"";
-  $header .= $js_file_location . $query_string;
-  $header .= "\"></script>\n";
-  $header .= "<script type=\"text/javascript\" language=\"JavaScript\"><!--\n";
-
-  $footer = '/************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/'."\n";
-  $footer .= 'var s_code=s.t();if(s_code)document.write(s_code)//--></script>'."\n";
-  $footer .= '<script language="JavaScript" type="text/javascript"><!--'."\n";
-  $footer .= "if(navigator.appVersion.indexOf('MSIE')>=0)document.write(unescape('%3C')+'\!-'+'-')"."\n";
-  $footer .= '//--></script><noscript><a href="http://www.omniture.com" title="Web Analytics"><img src="';
-  $footer .= check_plain(variable_get("omniture_image_file_location", 'http://examplecom.112.2O7.net/b/ss/examplecom/1/H.20.3--NS/0')).'/'.rand(0, 10000000).'"'."\n";
-  $footer .= 'height="1" width="1" border="0" alt="" /></a></noscript><!--/DO NOT REMOVE/-->'."\n";
-  $footer .= '<!-- End SiteCatalyst code version: ';
-  $footer .=  check_plain(variable_get("omniture_version", 'H.20.3.'));
-  $footer .= ' -->'."\n";
-
   if ($omniture_hooked_vars = module_invoke_all('omniture_variables')) {
-    if (isset($omniture_hooked_vars['header'])) {
-      $header = $omniture_hooked_vars['header'];
-    }
+    $header = $site_catalyst->getHeader($omniture_hooked_vars['header']);
     if (isset($omniture_hooked_vars['variables'])) {
-      $extra_variables_formatted .= _omniture_format_variables($omniture_hooked_vars['variables']);
+      $extra_variables= _omniture_format_variables($omniture_hooked_vars['variables']);
+      foreach($extra_variables as $key => $value) {
+        $site_catalyst->setCustomKey($key, $value);
+      }
     }
-    if (isset($omniture_hooked_vars['footer'])) {
-      $footer = $omniture_hooked_vars['footer'];
-    }
+    $payload = $site_catalyst->getPayload();
+    $payload .= $codesnippet;
+    $footer = $site_catalyst->getFooter($omniture_hooked_vars['footer']);
   }
 
   $page['page_bottom']['omniture'] =  array(
@@ -186,7 +167,7 @@ function omniture_page_alter(&$page) {
     ),
     'variables'=> array(
       '#type' => 'markup',
-      '#markup' => $extra_variables_formatted,
+      '#markup' => $payload,
     ),
     'footer'=> array(
       '#type' => 'markup',
@@ -220,9 +201,9 @@ function _omniture_format_variables(array $variables = array()) {
       'clear' => TRUE,
       'sanitize' => TRUE,
     ));
-    $variables_formatted .= "{$key}=\"{$value}\";\n";
+    $variables_arr[$key] = $value;
   }
-  return $variables_formatted;
+  return $variables_arr;
 }
 
 /**
@@ -252,6 +233,12 @@ function omniture_admin_settings($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t("SiteCatalyst version (used by omniture for debugging)"),
     '#default_value' => check_plain(variable_get("omniture_version", 'H.20.3.')),
+  );
+
+  $form['general']['omniture_account'] = array(
+    '#type' => 'textfield',
+    '#title' => t("SiteCatalyst account (Optional)"),
+    '#default_value' => check_plain(variable_get("omniture_account", '')),
   );
 
   $form['roles'] = array(
