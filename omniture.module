@@ -167,7 +167,7 @@ function omniture_page_alter(&$page) {
   $footer .=  check_plain(variable_get("omniture_version", 'H.20.3.'));
   $footer .= ' -->'."\n";
 
-  if ($omniture_hooked_vars = module_invoke_all('omniture_variables')) {
+  if ($omniture_hooked_vars = module_invoke_all('omniture_variables', $page)) {
     if (isset($omniture_hooked_vars['header'])) {
       $header = $omniture_hooked_vars['header'];
     }
