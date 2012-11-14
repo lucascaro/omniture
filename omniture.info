@@ -5,3 +5,6 @@ files[] = omniture.module
 files[] = omniture.install
 files[] = tests/omniture.test
 package = Statistics
+
+dependencies[] = libraries
+dependencies[] = xautoload
