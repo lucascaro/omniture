@@ -10,7 +10,6 @@
  * @co-maintainer: Matthew Tucker
  *
  */
-use Drupal\omniture\SiteCatalyst;
 
 /**
  * Implements hook_help().
@@ -21,6 +20,42 @@ function omniture_help($path, $arg) {
       return t("Settings for Omniture's SiteCatalyst package");
   }
 }
+
+/**
+  * Implements hook_libraries_info()
+  *
+  * Allows to register PSR-0 (or other) class folders for your libraries.
+  * (those things living in sites/all/libraries)
+  *
+  * The original documentation for this hook is at libraries module,
+  * libraries.api.php
+  *
+  * X Autoload extends the capabilities of this hook, by adding an "xautoload"
+  * key. This key takes a callback or closure function, which has the same
+  * signature as hook_xautoload($api).
+  * This means, you can use the same methods on the $api object.
+  *
+  * TODO: The $api object should be specified by an interface.
+  *
+  * @return array
+  *   Same as explained in libraries module, but with added key 'xautoload'.
+  */
+  function omniture_libraries_info() {
+    return array(
+        'sitecatalyst' => array(
+          'name' => 'SiteCatalyst Library',
+        'vendor url' => 'https://github.com/RiotGames/sitecatalyst',
+        'download url' => 'https://github.com/RiotGames/sitecatalyst.git',
+        'version' => '1.0',
+        'xautoload' => function($api) {
+          // Register a namespace with PSR-0 root in <library dir>/lib/
+          // Note: $api already knows the library directory.
+          // Note: We could omit the 'lib', as this is the default value.
+          $api->namespaceRoot('sitecatalyst', 'lib');
+        },
+      ),
+    );
+  }
 
 /**
  * Implements hook_permission().
@@ -136,8 +171,8 @@ function omniture_page_alter(&$page) {
   // Like drupal_add_js, add a query string to the end of the js file location.
   $query_string = '?' . variable_get('css_js_query_string', '0');
   $js_file_location = check_plain(variable_get("omniture_js_file_location", 'http://www.example.com/js/s_code_remote_h.js'));
-
-  $site_catalyst = new SiteCatalyst($js_file_location, check_plain(variable_get("omniture_version", 'H.20.3.')), check_plain(variable_get('omniture_account', '')));
+  require libraries_get_path('sitecatalyst') . '/lib/SiteCatalyst.php';
+  $site_catalyst = new SiteCatalyst($js_file_location, check_plain(variable_get('omniture_account', '')), check_plain(variable_get("omniture_version", 'H.20.3.')));
 
 
   // Add any custom code snippets if specified and replace any tokens.
@@ -148,7 +183,7 @@ function omniture_page_alter(&$page) {
   )) . "\n";
 
   if ($omniture_hooked_vars = module_invoke_all('omniture_variables')) {
-    $header = $site_catalyst->getHeader($omniture_hooked_vars['header']);
+    $header = isset($omniture_hooked_vars['header']) ? $omniture_hooked_vars['header'] : $site_catalyst->getHeader();
     if (isset($omniture_hooked_vars['variables'])) {
       $extra_variables= _omniture_format_variables($omniture_hooked_vars['variables']);
       foreach($extra_variables as $key => $value) {
@@ -157,7 +192,7 @@ function omniture_page_alter(&$page) {
     }
     $payload = $site_catalyst->getPayload();
     $payload .= $codesnippet;
-    $footer = $site_catalyst->getFooter($omniture_hooked_vars['footer']);
+    $footer = isset($omniture_hooked_vars['footer']) ? $omniture_hooked_vars['footer'] : $site_catalyst->getFooter();
   }
 
   $page['page_bottom']['omniture'] =  array(
